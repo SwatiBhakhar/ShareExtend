@@ -36,4 +36,23 @@ class ShareExtend {
 
     return _channel.invokeMethod('share', params);
   }
+
+  static Future<void> shareWhatsapp(String text, String type,
+      {Rect sharePositionOrigin}) {
+    assert(text != null);
+    assert(text.isNotEmpty);
+    final Map<String, dynamic> params = <String, dynamic>{
+      'text': text,
+      'type': type
+    };
+
+    if (sharePositionOrigin != null) {
+      params['originX'] = sharePositionOrigin.left;
+      params['originY'] = sharePositionOrigin.top;
+      params['originWidth'] = sharePositionOrigin.width;
+      params['originHeight'] = sharePositionOrigin.height;
+    }
+
+    return _channel.invokeMethod('shareWhatsapp', params);
+  }
 }
