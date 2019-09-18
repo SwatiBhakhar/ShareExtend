@@ -11,6 +11,7 @@ import java.util.Map;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.PluginRegistry;
@@ -50,6 +51,13 @@ public class ShareExtendPlugin implements MethodChannel.MethodCallHandler, Plugi
             // Android does not support showing the share sheet at a particular point on screen.
             share((String) call.argument("text"), (String) call.argument("type"));
             result.success(null);
+        } else if (call.method.equals("shareWhatsapp")) {
+            if (!(call.arguments instanceof Map)) {
+                throw new IllegalArgumentException("Map argument expected");
+            }
+            // Android does not support showing the share sheet at a particular point on screen.
+            shareWhatsapp((String) call.argument("text"), (String) call.argument("type"));
+            result.success(null);
         } else {
             result.notImplemented();
         }
@@ -64,6 +72,55 @@ public class ShareExtendPlugin implements MethodChannel.MethodCallHandler, Plugi
 
         Intent shareIntent = new Intent();
         shareIntent.setAction(Intent.ACTION_SEND);
+
+        if ("text".equals(type)) {
+            shareIntent.putExtra(Intent.EXTRA_TEXT, text);
+            shareIntent.setType("text/plain");
+        } else {
+            File f = new File(text);
+            if (!f.exists()) {
+                throw new IllegalArgumentException("file not exists");
+            }
+
+            if (ShareUtils.shouldRequestPermission(text)) {
+                if (!checkPermisson()) {
+                    requestPermission();
+                    return;
+                }
+            }
+
+            Uri uri = ShareUtils.getUriForFile(mRegistrar.activity(), f, type);
+
+            if ("image".equals(type)) {
+                shareIntent.setType("image/*");
+            } else if ("video".equals(type)) {
+                shareIntent.setType("video/*");
+            } else {
+                shareIntent.setType("application/*");
+            }
+            shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+        }
+
+        Intent chooserIntent = Intent.createChooser(shareIntent, null /* dialog title optional */);
+        if (mRegistrar.activity() != null) {
+            mRegistrar.activity().startActivity(chooserIntent);
+        } else {
+            chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            mRegistrar.context().startActivity(chooserIntent);
+        }
+    }
+
+
+    private void shareWhatsapp(String text, String type) {
+        if (text == null || text.isEmpty()) {
+            throw new IllegalArgumentException("Non-empty text expected");
+        }
+        this.text = text;
+        this.type = type;
+
+        Intent shareIntent = new Intent();
+        shareIntent.setAction(Intent.ACTION_SEND);
+        shareIntent.setPackage("com.whatsapp");
 
         if ("text".equals(type)) {
             shareIntent.putExtra(Intent.EXTRA_TEXT, text);
